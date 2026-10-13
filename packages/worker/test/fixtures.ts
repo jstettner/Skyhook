@@ -1,14 +1,14 @@
-import { Effect, Layer } from 'effect'
-import type { EventEnvelope } from '@hermes-webhook-relay/envelope'
+import { Effect, Layer, Schema } from 'effect'
+import { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import * as EventQueue from '../src/Event/EventQueue'
 import { createApp } from '../src/index'
 import * as Webhook from '../src/Webhook/Webhook'
 import { WebhookProviders } from '../src/Webhook/WebhookProviders'
 
-export const event: EventEnvelope.EventEnvelope = {
+export const event = Schema.decodeSync(EventEnvelope.EventEnvelope)({
   version: 1, provider: 'granola', eventId: 'event-1', eventType: 'fixture',
   sourceRecordId: 'meeting-1', sourceTimestamp: '2026-09-16T12:00:00Z',
-}
+})
 export const sendResponse = { metadata: { metrics: { backlogCount: 1, backlogBytes: 128 } } }
 export const request = () => new Request('https://example.com/webhooks/granola', { method: 'POST' })
 

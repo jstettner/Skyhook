@@ -84,14 +84,15 @@ export const ingestion = (signingSecret: Redacted.Redacted<string>): Effect.Effe
           Effect.mapError(() => new Webhook.InvalidPayload()),
         )
         if (payload.event_id !== id) return yield* Effect.fail(new Webhook.InvalidPayload())
-        return {
-          version: 1 as const,
-          provider: 'granola' as const,
+        // Decoding brands the identifiers and checks the envelope's own limits.
+        return yield* EventEnvelope.decode({
+          version: 1,
+          provider: 'granola',
           eventId: payload.event_id,
           eventType: payload.event_type,
           sourceRecordId: payload.note_id,
           sourceTimestamp: payload.occurred_at,
-        }
+        }).pipe(Effect.mapError(() => new Webhook.InvalidPayload()))
       }),
     }
   })

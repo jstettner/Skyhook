@@ -71,14 +71,15 @@ export const ingestion = (signingSecret: Redacted.Redacted<string>): Effect.Effe
             new TextEncoder().encode(`${payload.event}\n${payload.recording.id}\n${payload.timestamp}`)))),
           catch: () => new Webhook.IngestionFailed(),
         })
-        return {
-          version: 1 as const,
-          provider: 'pocket' as const,
+        // Decoding brands the identifiers and checks the envelope's own limits.
+        return yield* EventEnvelope.decode({
+          version: 1,
+          provider: 'pocket',
           eventId,
           eventType: payload.event,
           sourceRecordId: payload.recording.id,
           sourceTimestamp: payload.timestamp,
-        }
+        }).pipe(Effect.mapError(() => new Webhook.InvalidPayload()))
       }),
     }
   })
