@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "include": [],
+  "compilerOptions": {
+    // Project references: `tsc -b` checks each package; declarations go to a gitignored dir.
+    "incremental": true,
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "${configDir}/.tsbuild",
+    "rootDir": "${configDir}",
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+    "strict": true,
+    "skipLibCheck": true,
+    // No ambient @types: each package opts in to exactly what it runs on.
+    "types": []
+  }
+}

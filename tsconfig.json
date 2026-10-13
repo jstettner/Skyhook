@@ -1,14 +1,9 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "strict": true,
-    "skipLibCheck": true,
-    "lib": [
-      "ESNext"
-    ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
-  },
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // `bun run typecheck` = `tsc -b` over these projects.
+  "files": [],
+  "references": [
+    { "path": "packages/envelope" },
+    { "path": "packages/worker" }
+  ]
 }

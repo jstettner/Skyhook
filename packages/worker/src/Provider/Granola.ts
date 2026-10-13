@@ -1,6 +1,6 @@
 import { Clock, Effect, Redacted, Result, Schema } from 'effect'
 import * as Base64 from 'effect/encoding/Base64'
-import { SourceTimestamp } from '../Event/EventEnvelope'
+import { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import * as Webhook from '../Webhook/Webhook'
 
 const MAX_BODY_BYTES = 64 * 1024
@@ -8,7 +8,7 @@ const Identifier = Schema.String.pipe(Schema.check(Schema.isPattern(/^[A-Za-z0-9
 const fields = {
   event_id: Identifier,
   note_id: Schema.String.pipe(Schema.check(Schema.isPattern(/^not_[a-zA-Z0-9]{14}$/))),
-  occurred_at: SourceTimestamp,
+  occurred_at: EventEnvelope.SourceTimestamp,
 }
 // Ignore additive provider fields, but only normalize explicitly selected metadata.
 const Payload = Schema.Union([

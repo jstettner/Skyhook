@@ -1,11 +1,11 @@
 import { Effect, Layer } from 'effect'
-import type { EventEnvelope } from '../src/Event/EventEnvelope'
+import type { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import * as EventQueue from '../src/Event/EventQueue'
 import { createApp } from '../src/index'
 import * as Webhook from '../src/Webhook/Webhook'
 import { WebhookProviders } from '../src/Webhook/WebhookProviders'
 
-export const event: EventEnvelope = {
+export const event: EventEnvelope.EventEnvelope = {
   version: 1, provider: 'granola', eventId: 'event-1', eventType: 'fixture',
   sourceRecordId: 'meeting-1', sourceTimestamp: '2026-09-16T12:00:00Z',
 }

@@ -1,0 +1,18 @@
+{
+  "name": "@hermes-webhook-relay/envelope",
+  "private": true,
+  "type": "module",
+  "description": "The event envelope the Worker enqueues and consumers read, as an Effect schema. Platform-free.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "effect": "catalog:",
+    "vitest": "catalog:"
+  }
+}

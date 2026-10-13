@@ -9,7 +9,7 @@ Providers are opt-in. Each deployment sets `WEBHOOK_PROVIDERS` (a comma-separate
 list such as `granola,pocket`) and a signing secret for each enabled provider.
 None of these are checked in:
 
-- **Locally:** copy `.dev.vars.example` to `.dev.vars` (gitignored) and fill it in.
+- **Locally:** copy `packages/worker/.dev.vars.example` to `packages/worker/.dev.vars` (gitignored) and fill it in.
 - **Deployed:** set each value with `wrangler secret put`, for example
   `wrangler secret put WEBHOOK_PROVIDERS`. `WEBHOOK_PROVIDERS` is not sensitive,
   but secrets persist across deploys, whereas `wrangler deploy` resets plain vars
@@ -32,8 +32,8 @@ malformed returns sanitized 500 on that provider's route only. A
 `WEBHOOK_PROVIDERS` value naming an unknown provider returns sanitized 500 on every
 webhook route.
 
-To add a provider, implement a `Webhook.Ingestion` builder (see `src/Provider/Granola.ts`)
-and register it with its secret binding in `src/Webhook/WebhookProviders.ts`.
+To add a provider, implement a `Webhook.Ingestion` builder (see `packages/worker/src/Provider/Granola.ts`)
+and register it with its secret binding in `packages/worker/src/Webhook/WebhookProviders.ts`.
 
 ## Providers
 
@@ -57,12 +57,12 @@ interoperability (signature format, retry behaviour) still needs verification.
 ## Local verification
 
 ```sh
-npm ci
-npm run cf-typegen
-npm run typecheck
-npm test
-npx wrangler deploy --dry-run
-npm run dev
+bun install
+bun run cf-typegen
+bun run typecheck
+bun run test
+(cd packages/worker && bunx wrangler deploy --dry-run)
+bun run dev
 ```
 
 In another terminal:
@@ -73,22 +73,36 @@ curl -i -X POST http://localhost:8787/webhooks/granola \
   -H 'Content-Type: application/json' --data '{"synthetic":true}'
 ```
 
-Create `.dev.vars` from `.dev.vars.example` first. Expect 200 for the root and,
+Create `packages/worker/.dev.vars` from `.dev.vars.example` first. Expect 200 for the root and,
 for the unsigned webhook, 401 when `granola` is enabled with a secret, 404 when it is not enabled, and 500 when it is enabled
 without a secret. Wrangler uses a local queue;
 these checks do not require remote provisioning. Regenerate
-`worker-configuration.d.ts` with `npm run cf-typegen` whenever Wrangler
+`packages/worker/worker-configuration.d.ts` with `bun run cf-typegen` whenever Wrangler
 configuration changes; it ignores local `.env` files so their variable names are
 not written into the committed types.
 
 ## Structure
 
-Code is organized by domain under `src/<Domain>/`. Each module is imported as a
-namespace (`import * as Webhook from './Webhook/Webhook'`), so names inside it
-stay short (`Webhook.Unauthorized`, `EventQueue.layer`). Tests mirror `src/`.
+The repo is a Bun workspace. Dependency versions are pinned once in the root
+`package.json` catalog, and `bun run typecheck` runs `tsc -b` over each package as
+its own TypeScript project, typed only for the platform it runs on.
 
-- `src/Event/EventEnvelope.ts`: bounded metadata schema/type, `SourceTimestamp`,
-  and the strict `decode`.
+| Package | What |
+| --- | --- |
+| `packages/envelope` | The event envelope schema the Worker enqueues and consumers read. Platform-free. |
+| `packages/worker` | The Cloudflare Worker: webhook verification, validation, and enqueueing. |
+
+Within a package, code is organized by domain under `src/<Domain>/`. Each module is
+imported as a namespace (`import * as Webhook from './Webhook/Webhook'`), so names
+inside it stay short (`Webhook.Unauthorized`, `EventQueue.layer`). Tests mirror `src/`.
+
+In `packages/envelope`:
+
+- `src/EventEnvelope.ts`: bounded metadata schema/type, `SourceTimestamp`, and the
+  strict `decode`. `src/index.ts` exports it as the `EventEnvelope` namespace.
+
+In `packages/worker`:
+
 - `src/Event/EventQueue.ts`: the `EventQueue` service, its `layer(binding)`
   Cloudflare producer, and typed `EnqueueFailed`.
 - `src/Webhook/Webhook.ts`: provider-neutral ingestion and resolution errors, the
@@ -155,4 +169,4 @@ See `spec/granola.md` for the provider contract and deployment checklist.
   establish free-plan CPU compliance.
 
 No remote resources were created or deployed by this foundation setup.
-`npm run deploy` is available only for a later, explicitly authorized deployment.
+`bun run deploy` is available only for a later, explicitly authorized deployment.

@@ -1,6 +1,6 @@
 import { Clock, Effect, Redacted, Result, Schema } from 'effect'
 import * as Hex from 'effect/encoding/Hex'
-import { SourceTimestamp } from '../Event/EventEnvelope'
+import { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import * as Webhook from '../Webhook/Webhook'
 
 // Pocket sends the full transcript and summaries, so allow long meetings.
@@ -15,7 +15,7 @@ const Payload = Schema.Struct({
     'transcript.edited', 'action_items.updated', 'recording.created', 'recording.deleted',
     'recording.merged', 'translation.completed',
   ]),
-  timestamp: SourceTimestamp,
+  timestamp: EventEnvelope.SourceTimestamp,
   recording: Schema.Struct({ id: Schema.String.pipe(Schema.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,512}$/))) }),
 }).annotate({ identifier: 'PocketPayload' })
 

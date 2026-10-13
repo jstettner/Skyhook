@@ -1,13 +1,15 @@
 # hermes-webhook-relay
 
-Cloudflare Worker (Hono + Effect v4) that relays provider webhooks.
+Cloudflare Worker (Hono + Effect v4) that relays provider webhooks. A Bun workspace:
+`packages/envelope` (the shared event schema, platform-free) and `packages/worker` (the Worker).
+Dependency versions live in the root `package.json` catalog.
 
 ## Commands
 
 ```
-npm run typecheck
-npm test
-npm run dev        # wrangler dev
+bun run typecheck  # tsc -b over every package
+bun run test
+bun run dev        # wrangler dev
 ```
 
 ## Effect v4 reference

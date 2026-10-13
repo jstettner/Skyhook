@@ -1,5 +1,5 @@
 import { Effect, Schema, Stream } from 'effect'
-import type { EventEnvelope } from '../Event/EventEnvelope'
+import type { EventEnvelope } from '@hermes-webhook-relay/envelope'
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()('WebhookUnauthorized', {}) {}
 export class InvalidPayload extends Schema.TaggedError<InvalidPayload>()('WebhookInvalidPayload', {}) {}
@@ -14,7 +14,7 @@ export type IngestionError = Unauthorized | InvalidPayload | BodyTooLarge | Inge
 
 // Shape shared by every provider's ingestion service.
 export interface Ingestion {
-  readonly ingest: (request: Request) => Effect.Effect<EventEnvelope, IngestionError>
+  readonly ingest: (request: Request) => Effect.Effect<EventEnvelope.EventEnvelope, IngestionError>
 }
 
 export const readBody = (request: Request, maxBytes: number) => Effect.suspend(() => {

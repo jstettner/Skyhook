@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  // `types` stays [] (from the base): the envelope is platform-free, so no Node, Bun, or Workers globals.
+  "include": ["src", "test"]
+}

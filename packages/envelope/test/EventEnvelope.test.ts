@@ -1,7 +1,11 @@
 import { describe, expect, it } from '@effect/vitest'
 import { Effect, Result } from 'effect'
-import * as EventEnvelope from '../../src/Event/EventEnvelope'
-import { event } from '../fixtures'
+import * as EventEnvelope from '../src/EventEnvelope'
+
+const event = {
+  version: 1, provider: 'granola', eventId: 'event-1', eventType: 'fixture',
+  sourceRecordId: 'meeting-1', sourceTimestamp: '2026-09-16T12:00:00Z',
+}
 
 describe('envelope', () => {
   it.effect.each([
