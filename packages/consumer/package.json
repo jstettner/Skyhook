@@ -1,0 +1,22 @@
+{
+  "name": "@hermes-webhook-relay/consumer",
+  "private": true,
+  "type": "module",
+  "description": "relay-consumer: pulls relay events from the Cloudflare queue into a local inbox for an agent to work through.",
+  "scripts": {
+    "start": "bun src/main.ts",
+    "build": "bun build src/main.ts --compile --outfile dist/relay-consumer"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "catalog:",
+    "@effect/sql-sqlite-bun": "catalog:",
+    "@hermes-webhook-relay/envelope": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/sql-sqlite-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/bun": "catalog:",
+    "vitest": "catalog:"
+  }
+}

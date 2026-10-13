@@ -9,19 +9,27 @@
     ],
     "catalog": {
       "effect": "4.0.2",
+      "@effect/platform-bun": "4.0.2",
+      "@effect/sql-sqlite-bun": "4.0.2",
+      "@effect/sql-sqlite-node": "4.0.2",
       "@effect/vitest": "4.0.2",
+      "@types/bun": "1.4.2",
       "hono": "4.13.8",
       "typescript": "7.0.2",
       "vitest": "5.0.1",
       "wrangler": "4.132.0"
     }
   },
+  "overrides": {
+    "@effect/platform-node-shared": "4.0.2"
+  },
   "scripts": {
     "typecheck": "tsc -b",
     "test": "vitest run",
     "dev": "bun run --filter @hermes-webhook-relay/worker dev",
     "deploy": "bun run --filter @hermes-webhook-relay/worker deploy",
-    "cf-typegen": "bun run --filter @hermes-webhook-relay/worker cf-typegen"
+    "cf-typegen": "bun run --filter @hermes-webhook-relay/worker cf-typegen",
+    "build": "bun run --filter @hermes-webhook-relay/consumer build"
   },
   "devDependencies": {
     "@effect/vitest": "catalog:",

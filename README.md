@@ -1,7 +1,15 @@
 # hermes-webhook-relay
 
 A Hono Cloudflare Worker with Effect v4 webhook ingestion and queueing for
-Granola and Pocket.
+Granola and Pocket, and `relay-consumer`, a CLI that pulls those events into a
+local inbox for an agent such as Hermes to work through.
+
+```text
+Granola / Pocket ──signed webhook──▶ Worker ──▶ Cloudflare Queue
+                                                     │  HTTP pull (outbound)
+                                                     ▼
+                              relay-consumer pull ──▶ local inbox ◀── pending / show / complete
+```
 
 ## Configuration
 
@@ -54,6 +62,80 @@ decoded. Pocket sends no event ID, so `eventId` is the SHA-256 hex of
 `event`, `recording.id` and the payload `timestamp`. Real Pocket delivery
 interoperability (signature format, retry behaviour) still needs verification.
 
+## Consumer
+
+`packages/consumer` builds `relay-consumer`, one self-contained binary (Bun's
+runtime included, so the host doesn't need Bun):
+
+```sh
+bun run build                     # → packages/consumer/dist/relay-consumer
+```
+
+| Command | What |
+| --- | --- |
+| `pull` | Moves new events from the queue into the inbox, and acknowledges them once stored. |
+| `pending [--limit N] [--json]` | Events not yet completed, oldest first: `provider:eventId eventType sourceRecordId sourceTimestamp`. |
+| `show <ref> [--transcript]` | The event and the current state of its provider record (Granola note, Pocket recording), as JSON. |
+| `complete <ref>` | Marks an event handled; `pending` stops listing it. Completing it again is fine. |
+| `quarantine` | Queue messages that could never be events, as JSON. |
+
+`<ref>` is `provider:eventId`, as `pending` prints it. Errors are one line on
+stderr and exit 1.
+
+**Settings** are read from the environment, then from a dotenv file
+(`~/.config/hermes-webhook-relay/env`, or `RELAY_ENV_FILE`); see
+`packages/consumer/env.example`. Only `pull` needs the Cloudflare settings and
+only `show` needs a provider API key, so an agent that only lists, reads and
+completes events never needs the queue token. The inbox is SQLite at
+`~/.local/state/hermes-webhook-relay/inbox.sqlite` (or `RELAY_INBOX`).
+
+**Queue setup.** Enable HTTP pull on the queue
+(`wrangler queues consumer http add hermes-webhook-events --message-retries 100`)
+and create an API token with Account → Queues → Edit, which pulling and
+acknowledging both need.
+
+**Delivery guarantees.** `pull` commits each batch to the inbox (`synchronous =
+FULL`) before acknowledging it; if storing fails nothing is acknowledged and
+Cloudflare redelivers the batch after a 60-second lease. Events are deduplicated
+by provider and event ID, including ones already completed, so redelivery is
+harmless. Other messages are handled so none is silently lost:
+
+- Malformed (not a valid envelope), or a different event reusing a stored event
+  ID: kept in the inbox's quarantine with its body, then acknowledged.
+  `pending` adds a `quarantined N` line while any are kept.
+- A valid header with an envelope version or provider this binary doesn't know
+  (the Worker was upgraded first): not acknowledged, but retried with a one-hour
+  delay. With `--message-retries 100` it outlasts the queue's 24-hour retention,
+  so upgrading `relay-consumer` within a day recovers it.
+
+The inbox keeps only event metadata. `show` fetches meeting content on demand and
+nothing stores it.
+
+### Hermes
+
+Run it from a Hermes cron job in monitor mode: a script runs every tick, and the
+agent runs only when the script's output changes.
+
+1. Put the binary at `~/.local/bin/relay-consumer` (or set `RELAY_CONSUMER` in the
+   script) and the settings file at `~/.config/hermes-webhook-relay/env`, `chmod 600`.
+   Hermes strips credentials from scripts' environment, so the file is where they go.
+2. Copy `packages/consumer/hermes/relay_monitor.sh` to `~/.hermes/scripts/`. It runs
+   `pull`, then `pending`. A failed pull exits non-zero, which Hermes reports as an alert.
+3. Create the job, adjusting the prompt to what the agent should do with meetings:
+
+   ```sh
+   hermes cron create '*/5 * * * *' \
+     'New meeting events are pending (provider:eventId type record timestamp). For each, run
+     `relay-consumer show <ref>` to read it, act on it, then `relay-consumer complete <ref>`.
+     Leave an event pending if you could not finish it. If nothing is pending, reply [SILENT].' \
+     --name 'meeting inbox' --monitor-script relay_monitor.sh
+   ```
+
+The agent needs a terminal that can run `relay-consumer`. Completing events
+changes `pending`, so the next tick wakes the agent once more with nothing new;
+the prompt's `[SILENT]` covers it. An event left pending doesn't wake the agent
+again until something else in the list changes.
+
 ## Local verification
 
 ```sh
@@ -91,6 +173,7 @@ its own TypeScript project, typed only for the platform it runs on.
 | --- | --- |
 | `packages/envelope` | The event envelope schema the Worker enqueues and consumers read. Platform-free. |
 | `packages/worker` | The Cloudflare Worker: webhook verification, validation, and enqueueing. |
+| `packages/consumer` | `relay-consumer`, the Bun CLI that pulls events into a local inbox. |
 
 Within a package, code is organized by domain under `src/<Domain>/`. Each module is
 imported as a namespace (`import * as Webhook from './Webhook/Webhook'`), so names
@@ -118,6 +201,30 @@ In `packages/worker`:
 - `src/Layers.ts`: `Bindings` and `AppLayer` (both service layers with a
   `ConfigProvider` over the bindings); the only place that wires layers.
 - `src/index.ts`: typed Hono app factory and the Effect execution boundary.
+
+In `packages/consumer`:
+
+- `src/Queue/QueueClient.ts`: the Cloudflare Queues HTTP pull client (`pull`,
+  `ack` with retries), retrying transient failures, and branded `MessageId` / `LeaseId`.
+- `src/Inbox/Inbox.ts`: the SQLite inbox (events and quarantine) over a generic
+  `SqlClient`. Rows decode with the envelope's branded schemas; `RefFromString` is
+  the `provider:eventId` codec the CLI parses arguments with.
+- `src/Pull/Pull.ts`: classifying queue messages and the store-then-acknowledge loop.
+- `src/SourceRecord/SourceRecord.ts`: the provider-neutral `Reader` shape `show`
+  uses and its errors (the consumer's counterpart of `Webhook.Ingestion`).
+- `src/SourceRecord/SourceRecordProviders.ts`: the registry (each provider's API key
+  variable and `reader` builder) and the `SourceRecordProviders` service that
+  resolves a provider to its reader, failing with `NotConfigured` without a key.
+- `src/Provider/Granola.ts`, `src/Provider/Pocket.ts`: `reader` builders taking a
+  redacted API key.
+- `src/Config.ts`, `src/Layers.ts`, `src/Cli.ts`, `src/main.ts`: settings and the
+  env file, layer wiring, the commands, and the Bun entry point.
+- `src/testing/`: an in-memory Cloudflare Queues API and inbox for tests.
+
+The binary uses `@effect/sql-sqlite-bun`. Tests run on Node under Vitest, so they
+give the inbox `@effect/sql-sqlite-node` instead; Bun's `node:sqlite` can't stand in
+for `bun:sqlite` because on macOS it loads a system SQLite built without extension
+loading, which `@effect/sql-sqlite-node` requires.
 
 The envelope contains only version, provider, event ID/type, source record ID,
 and UTC source timestamp. Identifiers are 1–512 characters; timestamps use
@@ -163,8 +270,8 @@ See `spec/granola.md` for the provider contract and deployment checklist.
   HTTP pull consumption and verify free-plan 24-hour retention separately.
 - Set `WEBHOOK_PROVIDERS` and each enabled provider's signing secret with
   `wrangler secret put`, not in source control.
-- Implement the private Hermes consumer with durable deduplication and safe
-  acknowledgment, outside this repository.
+- Enable HTTP pull with `--message-retries 100` and set up `relay-consumer`
+  (see [Consumer](#consumer)).
 - Verify real events and deployed CPU limits. Dry-run bundle size alone does not
   establish free-plan CPU compliance.
 

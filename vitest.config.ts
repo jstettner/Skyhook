@@ -8,5 +8,5 @@ const project = (name: string) => ({
 })
 
 export default defineConfig({
-  test: { projects: [project('envelope'), project('worker')] },
+  test: { projects: [project('envelope'), project('worker'), project('consumer')] },
 })

@@ -4,6 +4,7 @@
   "files": [],
   "references": [
     { "path": "packages/envelope" },
-    { "path": "packages/worker" }
+    { "path": "packages/worker" },
+    { "path": "packages/consumer" }
   ]
 }

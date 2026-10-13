@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig.base.json",
+  "include": ["src", "test"],
+  "references": [{ "path": "../envelope" }],
+  "compilerOptions": {
+    // Runs on Bun; its types include the Node APIs (`node:sqlite`) the tests also run on.
+    "types": ["bun"],
+    // Nothing imports the consumer, so it is type-checked without emitting declarations.
+    "composite": false,
+    "declaration": false,
+    "emitDeclarationOnly": false,
+    "noEmit": true
+  }
+}

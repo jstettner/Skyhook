@@ -1,8 +1,11 @@
 # hermes-webhook-relay
 
-Cloudflare Worker (Hono + Effect v4) that relays provider webhooks. A Bun workspace:
-`packages/envelope` (the shared event schema, platform-free) and `packages/worker` (the Worker).
-Dependency versions live in the root `package.json` catalog.
+Cloudflare Worker (Hono + Effect v4) that relays provider webhooks, and `relay-consumer`, the CLI
+that pulls them into a local inbox. A Bun workspace: `packages/envelope` (the shared event schema,
+platform-free), `packages/worker` (the Worker), and `packages/consumer` (the CLI, built with Bun).
+Dependency versions live in the root `package.json` catalog. The `overrides` entry holds
+`@effect/platform-node-shared` (pulled in by `@effect/platform-bun`) at the catalog's Effect version, so
+two Effect versions never meet at runtime; move it with the catalog.
 
 ## Commands
 
@@ -10,6 +13,7 @@ Dependency versions live in the root `package.json` catalog.
 bun run typecheck  # tsc -b over every package
 bun run test
 bun run dev        # wrangler dev
+bun run build      # packages/consumer/dist/relay-consumer
 ```
 
 ## Effect v4 reference
