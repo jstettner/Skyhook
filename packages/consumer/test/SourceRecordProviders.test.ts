@@ -68,6 +68,13 @@ describe('Pocket', () => {
     }])
   }))
 
+  it.effect('a transcript the API returns anyway is dropped unless asked for', () => Effect.gen(function* () {
+    const api = fakeApi(200, { success: true, data: { id: 'rec-1', transcript: { segments: [] } } })
+
+    expect(yield* read('pocket', 'rec-1').pipe(api.provide())).toEqual({ id: 'rec-1' })
+    expect(yield* read('pocket', 'rec-1', true).pipe(api.provide())).toEqual({ id: 'rec-1', transcript: { segments: [] } })
+  }))
+
   it.effect('a missing recording is an error naming the status', () => Effect.gen(function* () {
     const result = yield* read('pocket', 'gone').pipe(
       fakeApi(404, { success: false, error: 'Recording not found' }).provide(),
