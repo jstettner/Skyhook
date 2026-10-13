@@ -74,9 +74,18 @@ const show = Command.make('show', {
   Command.provide(SourceRecordProviders.layer),
 )
 
-const complete = Command.make('complete', { ref }, ({ ref }) => Effect.gen(function* () {
-  const result = yield* (yield* Inbox.Inbox).complete(ref)
-  yield* Console.log(`${result === 'Completed' ? 'completed' : 'already completed'} ${Inbox.formatRef(ref)}`)
+const CompleteOutput = Schema.Struct({
+  ref: Inbox.RefFromString,
+  result: Schema.Literals(['completed', 'already_completed']),
+})
+
+const complete = Command.make('complete', {
+  ref,
+  json: Flag.Boolean('json').pipe(Flag.withDefault(false), Flag.withDescription('Print JSON.')),
+}, ({ ref, json }) => Effect.gen(function* () {
+  const result = (yield* (yield* Inbox.Inbox).complete(ref)) === 'Completed' ? 'completed' : 'already_completed'
+  if (json) return yield* printJson(CompleteOutput)({ ref, result })
+  yield* Console.log(`${result === 'completed' ? 'completed' : 'already completed'} ${Inbox.formatRef(ref)}`)
 })).pipe(Command.withDescription('Mark an event handled, so `pending` no longer lists it.'))
 
 const quarantine = Command.make('quarantine', {}, () => Effect.gen(function* () {

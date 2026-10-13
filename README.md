@@ -76,7 +76,7 @@ bun run build                     # → packages/consumer/dist/relay-consumer
 | `pull` | Moves new events from the queue into the inbox, and acknowledges them once stored. |
 | `pending [--limit N] [--json]` | Events not yet completed, oldest first: `provider:eventId eventType sourceRecordId sourceTimestamp`. |
 | `show <ref> [--transcript]` | The event and the current state of its provider record (Granola note, Pocket recording), as JSON. Transcripts are left out unless `--transcript` is given; then the whole transcript is included, however long (Granola's is read page by page). |
-| `complete <ref>` | Marks an event handled; `pending` stops listing it. Completing it again is fine. |
+| `complete <ref> [--json]` | Marks an event handled; `pending` stops listing it. Completing it again is fine. `--json` prints `{"ref", "result"}`, the result being `completed` or `already_completed`. |
 | `quarantine` | Queue messages that could never be events, as JSON. |
 
 `<ref>` is `provider:eventId`, as `pending` prints it. Errors are one line on
