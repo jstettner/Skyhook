@@ -75,7 +75,7 @@ bun run build                     # → packages/consumer/dist/relay-consumer
 | --- | --- |
 | `pull` | Moves new events from the queue into the inbox, and acknowledges them once stored. |
 | `pending [--limit N] [--json]` | Events not yet completed, oldest first: `provider:eventId eventType sourceRecordId sourceTimestamp`. |
-| `show <ref> [--transcript]` | The event and the current state of its provider record (Granola note, Pocket recording), as JSON. |
+| `show <ref> [--transcript]` | The event and the current state of its provider record (Granola note, Pocket recording), as JSON. Transcripts are left out unless `--transcript` is given; then the whole transcript is included, however long (Granola's is read page by page). |
 | `complete <ref>` | Marks an event handled; `pending` stops listing it. Completing it again is fine. |
 | `quarantine` | Queue messages that could never be events, as JSON. |
 
@@ -126,8 +126,10 @@ agent runs only when the script's output changes.
    ```sh
    hermes cron create '*/5 * * * *' \
      'New meeting events are pending (provider:eventId type record timestamp). For each, run
-     `relay-consumer show <ref>` to read it, act on it, then `relay-consumer complete <ref>`.
-     Leave an event pending if you could not finish it. If nothing is pending, reply [SILENT].' \
+     `relay-consumer show <ref>` to read it (summary, attendees, calendar event), act on it, then
+     `relay-consumer complete <ref>`. Add `--transcript` only when the summary is not enough: a
+     transcript can be very long. Leave an event pending if you could not finish it. If nothing
+     is pending, reply [SILENT].' \
      --name 'meeting inbox' --monitor-script relay_monitor.sh
    ```
 
