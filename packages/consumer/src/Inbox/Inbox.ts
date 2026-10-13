@@ -1,5 +1,5 @@
 import { EventEnvelope } from '@hermes-webhook-relay/envelope'
-import { Context, DateTime, Effect, Layer, Option, Schema, SchemaGetter, SchemaTransformation } from 'effect'
+import { Context, DateTime, Effect, Layer, Option, Runtime, Schema, SchemaGetter, SchemaTransformation } from 'effect'
 import { SqlClient, type SqlError } from 'effect/sql'
 import * as QueueClient from '../Queue/QueueClient'
 
@@ -27,7 +27,10 @@ export const RefFromString = Schema.String.pipe(
 
 export const formatRef: (ref: Ref) => string = Schema.encodeSync(RefFromString)
 
+// Exits 3, so a caller can tell it from other failures.
 export class EventNotFound extends Schema.TaggedError<EventNotFound>()('EventNotFound', { ref: RefFromString }) {
+  readonly [Runtime.errorExitCode] = 3
+
   override get message() {
     return `no event ${formatRef(this.ref)} in the inbox`
   }

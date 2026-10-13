@@ -7,7 +7,8 @@ import * as Layers from './Layers'
 
 // An expected failure (a queue or provider error, missing configuration, an unknown
 // event) is one line on stderr; anything else keeps its full cause. The CLI has
-// already rendered its own usage errors. Either way the process exits 1.
+// already rendered its own usage errors. The process exits 3 for an event not in
+// the inbox, 4 for a provider record that doesn't exist or isn't readable, else 1.
 const report = (cause: Cause.Cause<unknown>) => Option.match(Cause.findErrorOption(cause), {
   onNone: () => Cause.hasInterruptsOnly(cause) ? Effect.void : Console.error(Cause.pretty(cause)),
   onSome: (error) => CliError.isCliError(error)

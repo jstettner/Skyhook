@@ -1,6 +1,6 @@
 import { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import { describe, expect, it } from '@effect/vitest'
-import { ConfigProvider, Effect, Layer, Result, Schema } from 'effect'
+import { ConfigProvider, Effect, Layer, Result, Runtime, Schema } from 'effect'
 import { HttpClient, type HttpClientRequest, HttpClientResponse } from 'effect/http'
 import * as SourceRecordProviders from '../src/SourceRecord/SourceRecordProviders'
 
@@ -104,15 +104,23 @@ describe('Pocket', () => {
     expect(yield* read('pocket', 'rec-1', true).pipe(api.provide())).toEqual({ id: 'rec-1', transcript: { segments: [] } })
   }))
 
-  it.effect('a missing recording is an error naming the status', () => Effect.gen(function* () {
+  it.effect('a missing recording is unavailable, which exits 4', () => Effect.gen(function* () {
     const result = yield* read('pocket', 'gone').pipe(
       always(404, { success: false, error: 'Recording not found' }).provide(),
       Effect.result,
     )
 
+    expect(Result.isFailure(result) && result.failure._tag).toBe('SourceRecordUnavailable')
+    expect(Result.isFailure(result) && Runtime.getErrorExitCode(result.failure)).toBe(4)
+  }))
+
+  it.effect('any other failing status is a failed read quoting the answer', () => Effect.gen(function* () {
+    const result = yield* read('pocket', 'rec-1').pipe(always(400, { success: false, error: 'bad request' }).provide(), Effect.result)
+
     expect(Result.isFailure(result) && result.failure.message).toBe(
-      'Pocket GET /public/recordings: 404: {"success":false,"error":"Recording not found"}',
+      'Pocket GET /public/recordings: 400: {"success":false,"error":"bad request"}',
     )
+    expect(Result.isFailure(result) && Runtime.getErrorExitCode(result.failure)).toBe(1)
   }))
 })
 

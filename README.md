@@ -80,7 +80,9 @@ bun run build                     # → packages/consumer/dist/relay-consumer
 | `quarantine` | Queue messages that could never be events, as JSON. |
 
 `<ref>` is `provider:eventId`, as `pending` prints it. Errors are one line on
-stderr and exit 1.
+stderr. The exit status is 3 for an event not in the inbox, 4 when the provider says
+the record doesn't exist or isn't readable with the API key (403/404/410, such as a
+deleted recording), and 1 for anything else, including a malformed `<ref>`.
 
 **Settings** are read from the environment, then from a dotenv file
 (`~/.config/hermes-webhook-relay/env`, or `RELAY_ENV_FILE`); see

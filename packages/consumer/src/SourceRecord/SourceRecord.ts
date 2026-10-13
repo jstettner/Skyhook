@@ -1,9 +1,26 @@
 import type { EventEnvelope } from '@hermes-webhook-relay/envelope'
-import { Effect, Schedule, Schema } from 'effect'
+import { Effect, Runtime, Schedule, Schema } from 'effect'
 import { HttpClient, type HttpClientRequest, HttpClientResponse } from 'effect/http'
 
 // Reading failed, or the provider answered something that isn't the expected JSON.
 export class ReadFailed extends Schema.TaggedError<ReadFailed>()('SourceRecordReadFailed', { message: Schema.String }) {}
+
+// HTTP statuses meaning the record is gone or this key may not read it, as opposed
+// to a failed read: trying again won't help.
+const UNAVAILABLE = new Set([403, 404, 410])
+
+// The provider says the record doesn't exist or isn't readable with this key, such
+// as a deleted recording. Exits 4, so a caller can tell it from a failed read.
+export class Unavailable extends Schema.TaggedError<Unavailable>()('SourceRecordUnavailable', {
+  what: Schema.String,
+  status: Schema.Number,
+}) {
+  readonly [Runtime.errorExitCode] = 4
+
+  override get message() {
+    return `${this.what}: ${this.status}: the record doesn't exist or isn't readable with this API key`
+  }
+}
 
 // The provider's API key isn't set. Never attach the key itself to errors.
 export class NotConfigured extends Schema.TaggedError<NotConfigured>()('SourceRecordNotConfigured', {
@@ -24,7 +41,7 @@ export interface Options {
 // names, as the provider's API returns it.
 export interface Reader {
   readonly read: (sourceRecordId: EventEnvelope.SourceRecordId, options: Options) =>
-    Effect.Effect<Schema.Json, ReadFailed>
+    Effect.Effect<Schema.Json, ReadFailed | Unavailable>
 }
 
 const RETRY_TIMES = 3
@@ -44,6 +61,7 @@ export const getJson = Effect.fnUntraced(function* <S extends Schema.Constraint>
   )
   return yield* Effect.gen(function* () {
     const response = yield* retrying.execute(request)
+    if (UNAVAILABLE.has(response.status)) return yield* new Unavailable({ what, status: response.status })
     if (response.status < 200 || response.status >= 300) {
       const text = yield* response.text.pipe(Effect.orElseSucceed(() => ''))
       const detail = text.slice(0, MAX_ERROR_DETAIL)

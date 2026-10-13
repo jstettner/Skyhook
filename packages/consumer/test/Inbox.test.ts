@@ -1,6 +1,6 @@
 import { EventEnvelope } from '@hermes-webhook-relay/envelope'
 import { describe, expect, it, layer } from '@effect/vitest'
-import { Effect, Option, Result, Schema } from 'effect'
+import { Effect, Option, Result, Runtime, Schema } from 'effect'
 import * as Inbox from '../src/Inbox/Inbox'
 import * as QueueClient from '../src/Queue/QueueClient'
 import { layerInbox } from '../src/testing'
@@ -58,6 +58,10 @@ layer(layerInbox)('Inbox', (it) => {
     expect(yield* inbox.receive(event('late-1'))).toBe('Duplicate')
     expect(Option.isSome((yield* inbox.get(ref('late-1'))).completedAt)).toBe(true)
   }))
+
+  it('an event not in the inbox exits 3', () => {
+    expect(Runtime.getErrorExitCode(new Inbox.EventNotFound({ ref: ref('missing') }))).toBe(3)
+  })
 
   it.effect('an unknown event is not found', () => Effect.gen(function* () {
     const inbox = yield* Inbox.Inbox
