@@ -32,14 +32,12 @@ const RETRY_BASE = '500 millis'
 // Error bodies are quoted in messages; never more than this.
 const MAX_ERROR_DETAIL = 300
 
-// GETs `request` (a read, so safe to retry) and decodes the JSON answer. `explain`
-// may give a clearer message for a known status.
+// GETs `request` (a read, so safe to retry) and decodes the JSON answer.
 export const getJson = Effect.fnUntraced(function* <S extends Schema.Constraint>(
   client: HttpClient.HttpClient,
   what: string,
   request: HttpClientRequest.HttpClientRequest,
   schema: S,
-  explain: (status: number) => string | undefined = () => undefined,
 ) {
   const retrying = client.pipe(
     HttpClient.retryTransient({ times: RETRY_TIMES, schedule: Schedule.exponential(RETRY_BASE) }),
@@ -48,7 +46,7 @@ export const getJson = Effect.fnUntraced(function* <S extends Schema.Constraint>
     const response = yield* retrying.execute(request)
     if (response.status < 200 || response.status >= 300) {
       const text = yield* response.text.pipe(Effect.orElseSucceed(() => ''))
-      const detail = explain(response.status) ?? text.slice(0, MAX_ERROR_DETAIL)
+      const detail = text.slice(0, MAX_ERROR_DETAIL)
       return yield* new ReadFailed({ message: `${what}: ${response.status}${detail ? `: ${detail}` : ''}` })
     }
     return yield* HttpClientResponse.schemaBodyJson(schema)(response)
